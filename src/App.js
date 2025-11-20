@@ -177,79 +177,86 @@ export default function App() {
       setStatusMsg("Create a session first.");
       return;
     }
-
+  
     setIsSending(true);
     setStatusMsg("Sending message...");
-
+  
+    // 1️⃣ Add user message
     const userMsg = { id: `user-${Date.now()}`, role: "user", content: text };
-    const next = [...messagesRef.current, userMsg];
-    setMessages(next);
-    persistMessages(sessionId, next);
-    setInput("");
-
-    const placeholderId = `assistant-placeholder-${Date.now()}`;
-
-    const assistantPlaceholder = { id: placeholderId, role: "assistant", content: "AI is thinking..." };
     setMessages(prev => {
-      const next = [...prev, assistantPlaceholder];
+      const next = [...prev, userMsg];
+      messagesRef.current = next;
       persistMessages(sessionId, next);
       return next;
     });
-
+    setInput("");
+  
+    // 2️⃣ Add assistant placeholder
+    const placeholderId = `assistant-placeholder-${Date.now()}`;
+    const assistantPlaceholder = { id: placeholderId, role: "assistant", content: "AI is thinking..." };
+    setMessages(prev => {
+      const next = [...prev, assistantPlaceholder];
+      messagesRef.current = next;
+      persistMessages(sessionId, next);
+      return next;
+    });
+  
     try {
       const res = await fetch(`${api.baseUrl}/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Accept: "application/json" },
         body: JSON.stringify({ sessionId, message: text }),
       });
-
+  
       if (!res.ok) {
         const errText = await res.text();
         throw new Error(`Server error: ${res.status} ${errText}`);
       }
-
+  
       const contentType = res.headers.get("content-type") || "";
-      if (res.body && (contentType.includes("text/event-stream") || contentType.includes("text/plain") || contentType.includes("application/octet-stream"))) {
+  
+      // 3️⃣ Handle streaming response
+      if (res.body && (contentType.includes("text/event-stream") || contentType.includes("text/plain"))) {
         const reader = res.body.getReader();
         const decoder = new TextDecoder();
         let done = false;
+  
         while (!done) {
           const { value, done: readerDone } = await reader.read();
           done = readerDone;
           if (value) {
             const chunk = decoder.decode(value, { stream: true });
+  
             setMessages(prev => {
-              const next = prev.slice();
+              const next = [...prev];
               const idx = next.findIndex(m => m.id === placeholderId);
-              if (idx >= 0) next[idx] = { ...next[idx], content: (next[idx].content === "AI is thinking..." ? "" : next[idx].content) + chunk };
+              if (idx >= 0) {
+                const prevContent = next[idx].content === "AI is thinking..." ? "" : next[idx].content;
+                next[idx] = { ...next[idx], content: prevContent + chunk };
+              }
+              messagesRef.current = next;
+              persistMessages(sessionId, next);
               return next;
             });
-            persistMessages(sessionId, messagesRef.current);
           }
         }
-      } else {
+      }
+      // 4️⃣ Handle normal JSON response
+      else {
         const data = await res.json();
         let assistantText = "";
         if (data == null) assistantText = "";
         else if (typeof data === "string") assistantText = data;
         else if (typeof data === "object") assistantText = data.answer ?? data.answerText ?? data.text ?? JSON.stringify(data);
         else assistantText = String(data);
-
-        try {
-          if (assistantText.trim().startsWith("{")) {
-            const parsed = JSON.parse(assistantText);
-            assistantText = parsed.answer ?? parsed.answerText ?? parsed.text ?? assistantText;
-          }
-        } catch (e) { /* ignore */ }
-
+  
+        // Replace placeholder with final answer
         setMessages(prev => {
-          const next = prev.slice();
+          const next = [...prev];
           const idx = next.findIndex(m => m.id === placeholderId);
-          if (idx >= 0) {
-            next[idx] = { id: `assistant-${Date.now()}`, role: "assistant", content: assistantText };
-          } else {
-            next.push({ id: `assistant-${Date.now()}`, role: "assistant", content: assistantText });
-          }
+          if (idx >= 0) next[idx] = { id: `assistant-${Date.now()}`, role: "assistant", content: assistantText };
+          else next.push({ id: `assistant-${Date.now()}`, role: "assistant", content: assistantText });
+          messagesRef.current = next;
           persistMessages(sessionId, next);
           return next;
         });
@@ -257,11 +264,12 @@ export default function App() {
     } catch (err) {
       console.error("Send message error:", err);
       setMessages(prev => {
-        const next = prev.slice();
+        const next = [...prev];
         const idx = next.findIndex(m => m.id === placeholderId);
         const content = `Error: ${err.message}`;
         if (idx >= 0) next[idx] = { id: `assistant-${Date.now()}`, role: "assistant", content };
         else next.push({ id: `assistant-${Date.now()}`, role: "assistant", content });
+        messagesRef.current = next;
         persistMessages(sessionId, next);
         return next;
       });
@@ -274,7 +282,7 @@ export default function App() {
   return (
     <div className="app-root">
       <header className="topbar">
-        <div className="title">News QA — Chat</div>
+        <div className="title">RAG News — Chat</div>
         <div className="controls">
           <button className="btn" onClick={createSession}>Create Session</button>
           <button className="btn" onClick={fetchHistory}>Fetch History</button>
