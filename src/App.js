@@ -181,7 +181,6 @@ export default function App() {
     setIsSending(true);
     setStatusMsg("Sending message...");
   
-    // 1️⃣ Add user message
     const userMsg = { id: `user-${Date.now()}`, role: "user", content: text };
     setMessages(prev => {
       const next = [...prev, userMsg];
@@ -191,7 +190,6 @@ export default function App() {
     });
     setInput("");
   
-    // 2️⃣ Add assistant placeholder
     const placeholderId = `assistant-placeholder-${Date.now()}`;
     const assistantPlaceholder = { id: placeholderId, role: "assistant", content: "AI is thinking..." };
     setMessages(prev => {
@@ -215,7 +213,6 @@ export default function App() {
   
       const contentType = res.headers.get("content-type") || "";
   
-      // 3️⃣ Handle streaming response
       if (res.body && (contentType.includes("text/event-stream") || contentType.includes("text/plain"))) {
         const reader = res.body.getReader();
         const decoder = new TextDecoder();
@@ -241,7 +238,6 @@ export default function App() {
           }
         }
       }
-      // 4️⃣ Handle normal JSON response
       else {
         const data = await res.json();
         let assistantText = "";
@@ -250,7 +246,6 @@ export default function App() {
         else if (typeof data === "object") assistantText = data.answer ?? data.answerText ?? data.text ?? JSON.stringify(data);
         else assistantText = String(data);
   
-        // Replace placeholder with final answer
         setMessages(prev => {
           const next = [...prev];
           const idx = next.findIndex(m => m.id === placeholderId);
