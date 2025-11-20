@@ -1,70 +1,121 @@
-# Getting Started with Create React App
+## RAG News - Frontend
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+This is the frontend for the News QA Chat application. It is built with React and communicates with the backend via a REST API to send chat messages, fetch session history, and manage sessions. It also supports streaming AI responses, local session caching, and session management.
 
-## Available Scripts
+# Features
+	•	Chat interface to interact with the AI assistant
+	•	Displays past messages per session
+	•	Streaming bot responses (typed-out AI replies)
+	•	Input box to send new messages
+	•	Create / reset / clear sessions
+	•	Persist conversation in local cache (TTL 1 hour)
+	•	Fetch session history from backend
+	•	Sidebar showing all active sessions
 
-In the project directory, you can run:
+# Architecture
 
-### `npm start`
+React Frontend
+   |
+   |-- api.js         <-- REST API wrapper
+   |-- App.js         <-- Main component & state management
+   |-- ChatMessage.js <-- Message display component
+   |-- SessionCache.js <-- Local caching using memory + localStorage
+   |
+Backend (Node.js Express)
+   |-- Session/Chat APIs
+   |-- Redis for in-memory sessions
+   |-- MongoDB for transcripts
+   |-- Gemini + RAG pipeline
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+# Requirements
+	•	Node.js
+	•	npm
+	•	Backend server running (http://localhost:4000 or deployed url "https://voosh-backend-2.onrender.com" )
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+# Installation
 
-### `npm test`
+# Clone the repository
+git clone https://github.com/venkatesht66/voosh_frontend
+cd frontend
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+# Install dependencies
+npm install
 
-### `npm run build`
+# Start the development server
+npm start
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+	•	The app will open on http://localhost:3000 (default)
+	•	Connects to backend via api.js (API_PREFIX)
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+# Folder Structure
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+frontend/
+│
+├── App.js              # Main app component, manages state & chat
+├── api.js              # API wrapper for chat/session endpoints
+├── ChatMessage.js      # Renders individual chat messages
+├── SessionCache.js     # In-memory + localStorage caching
+├── index.js            # React entry point
+├── styles.css          # Global styles
+└── package.json
 
-### `npm run eject`
+# Modules
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+1. api.js
+	•	Centralized wrapper for backend REST APIs
+	•	Methods: startSession(), listSessions(), getSessionHistory(), clearSession(), chat()
+	•	Handles JSON parsing and error handling
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+2. App.js
+	•	Main React component
+	•	Manages state: sessionId, messages, input, sessions, statusMsg
+	•	Handles:
+	•	Sending messages to backend
+	•	Fetching session history
+	•	Creating / clearing sessions
+	•	Streaming AI responses
+	•	Persisting messages to SessionCache
+	•	Scrolls chat to bottom automatically
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+3. ChatMessage.js
+	•	Displays individual chat messages
+	•	Styles messages differently for user, assistant, and system
+	•	Preserves line breaks
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+4. SessionCache.js
+	•	Local caching with memory + localStorage
+	•	Supports TTL (default 1 hour)
+	•	Methods:
+	•	set(key, value) → store value with timestamp
+	•	get(key) → retrieve value if TTL not expired
+	•	del(key) → delete value
+	•	clearAll() → clear all cached sessions
+	•	keys() → list all cached session keys
 
-## Learn More
+# Caching & Performance
+	•	In-memory cache (Map) for fast access
+	•	LocalStorage for persistence across reloads
+	•	TTL = 1 hour (configurable)
+	•	Persists last active session automatically
+	•	Reduces API calls to backend for repeated sessions
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+# Environment
+	•	Default backend API URL: https://voosh-backend-2.onrender.com or http://localhost:4000
+	•	Can be updated in api.js (API_PREFIX)
 
-To learn React, check out the [React documentation](https://reactjs.org/).
-
-### Code Splitting
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+# Usage
+	1.	Create Session
+	    •	Click “Create Session” → generates new sessionId
+	2.	Send Messages
+	    •	Type your question → press Enter or click “Send”
+	    •	AI response will appear as a streamed message
+	3.	Fetch History
+	    •	Click “Fetch History” to reload messages from backend
+	4.	Reset Chat
+	    •	Clears the conversation for the current session in frontend cache
+	5.	Clear Server Session
+	    •	Deletes session from backend Redis
+	    •	Archives messages to MongoDB transcript
+	6.	View Sessions
+	    •	Sidebar lists all sessions
+	    •	Click to load any previous session
