@@ -10,12 +10,15 @@ export default function App() {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [isSending, setIsSending] = useState(false);
-  const [isStreamingSupported, setIsStreamingSupported] = useState(true);
   const [statusMsg, setStatusMsg] = useState("");
   const messagesRef = useRef(messages);
   const scrollRef = useRef(null);
   const [sessions, setSessions] = useState([]);
   const [selectedSession, setSelectedSession] = useState(null);
+
+  // Mobile UI state
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [showAllSessionsMobile, setShowAllSessionsMobile] = useState(false);
 
   useEffect(() => { messagesRef.current = messages; }, [messages]);
 
@@ -63,6 +66,8 @@ export default function App() {
       setMessages([]);
       persistMessages(sid, []);
       setStatusMsg("Session created.");
+      // close mobile menu after creating
+      setMenuOpen(false);
     } catch (err) {
       console.error(err);
       setStatusMsg("Failed to create session.");
@@ -88,6 +93,8 @@ export default function App() {
       persistMessages(sid, normalized);
       setSelectedSession(sid);
       setStatusMsg("Loaded session");
+      setMenuOpen(false); // close menu on mobile when selecting session
+      setShowAllSessionsMobile(false);
     } catch (err) {
       console.error("Load session error:", err);
       setStatusMsg("Failed to load session");
@@ -131,6 +138,7 @@ export default function App() {
       setMessages(normalized);
       persistMessages(sessionId, normalized);
       setStatusMsg("History loaded.");
+      setMenuOpen(false);
     } catch (err) {
       console.error("Fetch history error:", err);
       setStatusMsg(`Failed to fetch history: ${err.message}`);
@@ -150,6 +158,7 @@ export default function App() {
       cache.del(`session:${sessionId}`);
       setMessages([]);
       setStatusMsg("Session cleared.");
+      setMenuOpen(false);
     } catch (err) {
       console.error(err);
       setStatusMsg("Failed to clear session.");
@@ -167,6 +176,7 @@ export default function App() {
     persistMessages(sessionId, []);
     setStatusMsg("Client conversation reset.");
     setTimeout(() => setStatusMsg(""), 1200);
+    setMenuOpen(false);
   };
 
   const sendMessage = async (evt) => {
@@ -274,19 +284,37 @@ export default function App() {
     }
   };
 
+  // Helper toggles for mobile menu
+  const toggleMenu = () => setMenuOpen(v => !v);
+  const toggleAllSessions = () => setShowAllSessionsMobile(v => !v);
+
   return (
     <div className="app-root">
       <header className="topbar">
         <div className="title">RAG News — Chat</div>
+
+        {/* Desktop controls */}
         <div className="controls">
           <button className="btn" onClick={createSession}>Create Session</button>
           <button className="btn" onClick={fetchHistory}>Fetch History</button>
           <button className="btn" onClick={resetClient}>Reset Chat</button>
           <button className="btn danger" onClick={clearSession}>Clear Server</button>
         </div>
+
+        {/* Mobile hamburger on right */}
+        <button
+          className={`hamburger ${menuOpen ? "open" : ""}`}
+          aria-label="Open menu"
+          onClick={toggleMenu}
+        >
+          <span className="bar" />
+          <span className="bar" />
+          <span className="bar" />
+        </button>
       </header>
 
       <main className="main">
+        {/* Desktop sidebar */}
         <aside className="sidebar">
           <div className="session-info">
             <div><strong>Session:</strong></div>
@@ -296,7 +324,7 @@ export default function App() {
           <div className="sessions-list">
             <div style={{ fontWeight: 600, marginBottom: 8 }}>All sessions</div>
             {sessions.length === 0 && <div className="hint">No sessions yet</div>}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 300, overflow: 'auto' }}>
+            <div className="sessions-scroll">
               {sessions.map(s => (
                 <button
                   key={s.sessionId}
@@ -320,6 +348,7 @@ export default function App() {
           </div>
         </aside>
 
+        {/* Chat area */}
         <section className="chat-area">
           <div className="messages" ref={scrollRef}>
             {messages.length === 0 && (
@@ -351,9 +380,47 @@ export default function App() {
       </main>
 
       <footer className="footer">
-        <div>Streaming supported: {isStreamingSupported ? "Yes" : "No (fallback)"}</div>
         <div>Cached sessions: {cache.keys().length}</div>
       </footer>
+
+      {/* Mobile overlay menu */}
+      <div className={`mobile-menu-overlay ${menuOpen ? "visible" : ""}`} onClick={() => setMenuOpen(false)} />
+      <div className={`mobile-menu ${menuOpen ? "visible" : ""}`}>
+        <div className="mobile-menu-inner" onClick={(e) => e.stopPropagation()}>
+          <div className="mobile-controls">
+            <button className="btn full" onClick={createSession}>Create Session</button>
+            <button className="btn full" onClick={fetchHistory}>Fetch History</button>
+            <button className="btn full" onClick={resetClient}>Reset Chat</button>
+            <button className="btn full danger" onClick={clearSession}>Clear Server</button>
+
+            <div className="mobile-all-sessions">
+              <button className="btn full secondary" onClick={toggleAllSessions}>
+                All sessions {showAllSessionsMobile ? "▲" : "▼"}
+              </button>
+
+              {showAllSessionsMobile && (
+                <div className="mobile-sessions-list">
+                  {sessions.length === 0 && <div className="hint">No sessions yet</div>}
+                  {sessions.map(s => (
+                    <button
+                      key={s.sessionId}
+                      className={`btn small mobile-session-button ${selectedSession === s.sessionId ? "primary" : ""}`}
+                      onClick={() => loadSessionChats(s.sessionId)}
+                      title={`Created: ${new Date(s.createdAt).toLocaleString()}`}
+                    >
+                      {s.sessionId.slice(0, 8)} · {new Date(s.lastActiveAt || s.createdAt).toLocaleString()}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div style={{ marginTop: 12 }}>
+            <button className="btn full" onClick={() => setMenuOpen(false)}>Close</button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
