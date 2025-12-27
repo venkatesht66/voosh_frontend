@@ -381,6 +381,9 @@ export default function App() {
 
       <footer className="footer">
         <div>Cached sessions: {cache.keys().length}</div>
+        <div style={{ padding: 18, color: 'var(--muted)', fontSize: 12 }}>
+          © {new Date().getFullYear()} • <span style={{color:'var(--accent)'}}>Venkatesh T</span> • Built with ❤️
+        </div>
       </footer>
 
       {/* Mobile overlay menu */}
